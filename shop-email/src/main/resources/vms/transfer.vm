@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>中国银行账户变动提示邮件</title>
+</head>
+
+<body>
+
+<div class="container">
+    <p>发件人:中国银行</p>
+    <p>收件人:${accountid} ${email}</p>
+    <h5>主题:${subject}</h5>
+    <p>尊敬的 ${accountid} :</p>
+    <p>正文:您的帐户${accountid}于${optime}发生一次<span style="color:red">转账</span>操作,接收账户为:${toaccountid}，
+        取出金额为<span style="color:red">${money}元</span>，操作后帐户余额为${balance}元。</p>
+    <p>祝好!</p>
+    <p>中国银行</p>
+</div>
+<div class="footer">
+    <p>${currentDate}</p>
+</div>
+
+</body>
+</html>

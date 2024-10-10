@@ -1,0 +1,6 @@
+server:
+  port: 8085
+
+spring:
+  main: #解决循环依赖问题
+    allow-circular-references: true

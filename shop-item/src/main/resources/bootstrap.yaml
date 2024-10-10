@@ -1,0 +1,45 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: shop-item
+  profiles:
+    active: dev
+  cloud:
+    #openfeign数据压缩
+    openfeign:
+      compression:
+        response:
+          enabled: true
+        request:
+          enabled: true
+          min-request-size: 2048 #超过2048字节就压缩
+          mime-types:
+            - text/xml
+            - application/xml
+            - application/json
+    nacos:
+      config:
+        namespace: public
+        group: DEFAULT_GROUP
+        username: nacos
+        password: nacos
+        shared-configs: #共享配置
+          - dataId: shop-mysql.yaml #数据库
+            group: DEFAULT_GROUP
+            refresh: true
+          - { data-id: res-mybatisPlus.yaml,refresh: true } #mp
+          - { data-id: res-threadPool.yaml,refresh: true } #@Async
+          - { data-id: res-redis.yaml,refresh: true } #redis
+          - { data-id: res-knife4j.yaml,refresh: true } #knife4j
+          - { data-id: res-jmx.yaml,refresh: true } #jmx
+          - { data-id: res-log.yaml,refresh: true }
+          - { data-id: sentinel.yaml,refresh: true } #哨兵
+          - { data-id: micrometer.yaml,refresh: true }
+          - { data-id: aliYunOss.yaml,refresh: true } #oss
+          - {data-id: activemq.yaml,refresh: true}
+          - {data-id: shared-seata.yaml,refresh: true} #seata分布式事务
+        server-addr: 127.0.0.1:8848
+        refresh-enabled: true #启用动态刷新
+      discovery:
+        server-addr: 127.0.0.1:8848

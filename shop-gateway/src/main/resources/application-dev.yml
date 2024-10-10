@@ -1,0 +1,140 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: shop-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    gateway:
+      routes:
+        - id: res-food  #路由id
+          uri: lb://res-food #路由微服务目标，lb代表负载均衡
+          predicates:  #路由断言，判断是否符合规则，符合则路由到目标
+            - Path=/resFood/**  #以请求路径做判断，以/resfood开头则符合
+          #  - ServiceTimeBetween=08:00,22:00
+#          filters:
+#            - TokenFilterFactory
+            #- PrintAny=1,2,3 #要与类名一致
+        #用户
+        - id: shop-user
+          uri: lb://shop-user
+          predicates:
+            - Path=/user/**
+        #验证码
+        - id: shop-yzm
+          uri: lb://shop-system
+          predicates:
+            - Path=/yzm/**
+        #normal
+        - id: shop-normal
+          uri: lb://shop-system
+          predicates:
+            - Path=/normal/**
+        #frontEdit
+        - id: shop-frontEdit
+          uri: lb://shop-system
+          predicates:
+            - Path=/frontEdit/**
+        #商品
+        - id: shop-item
+          uri: lb://shop-item
+          predicates:
+            - Path=/item/**
+        #销售额
+        - id: shop-finance
+          uri: lb://shop-item
+          predicates:
+            - Path=/finance/**
+        #预警类
+        - id: shop-inventory
+          uri: lb://shop-item
+          predicates:
+            - Path=/inventory/**
+        #地址
+        - id: shop-address
+          uri: lb://shop-address
+          predicates:
+            - Path=/address/**
+        #订单
+        - id: shop-order
+          uri: lb://shop-order
+          predicates:
+            - Path=/order/**
+        #发货有关Logistics
+        - id: shop-logistics
+          uri: lb://shop-order
+          predicates:
+            - Path=/logistics/**
+        #退货有关
+        - id: shop-goodsback
+          uri: lb://shop-order
+          predicates:
+            - Path=/goodsback/**
+        #graph  echart图像
+        - id: shop-graph
+          uri: lb://shop-order
+          predicates:
+            - Path=/graph/**
+        #支付
+        - id: shop-pay
+          uri:
+            lb://shop-order
+          predicates:
+            - Path=/alipay/**
+        #评论相关
+        - id: shop-comment
+          uri:
+            lb://shop-comment
+          predicates:
+            - Path=/comment/**
+        #chat
+        - id: shop-ws
+          uri:
+            lb://shop-chat
+          predicates:
+            - Path=/ws/chat/**
+        - id: shop-chat
+          uri:
+            lb://shop-chat
+          predicates:
+            - Path=/chat/**
+        #优惠券
+        - id: shop-coupon
+          uri: lb://shop-coupon
+          predicates:
+            - Path=/coupon/**
+        - id: shop-coupon-grap
+          uri: lb://shop-coupon
+          predicates:
+            - Path=/ws/coupon/**
+ #         filters:
+#            - TokenFilterFactory
+            #- After=
+            #其他断言看文档
+#          也可以单独加到每个下面
+#          filters:
+#            - args:
+#                - AddRequestHeader=
+      #default-filters: #左边的请求头里面的键，右边是值
+        #- AddResponseHeader=true,aaaaaa
+
+#jmx
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    jmx:
+      exposure:
+        include: "*"  # 默认情况下，一些敏感端点是禁用的，可以通过此配置启用
+
+logging:
+  file:
+    path: logs/${spring.application.name}
+  level:
+    root: info
+
+

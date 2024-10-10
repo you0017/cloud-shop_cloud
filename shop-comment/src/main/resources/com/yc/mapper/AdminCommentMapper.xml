@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.yc.mapper.AdminCommentMapper">
+
+
+    <select id="fuzzyQueryComment" resultType="com.yc.bean.AdminComment">
+        SELECT comments.id AS id,
+        item_id,
+        user_id,
+        item.name AS name,
+        userinformation.accountname AS accountname,
+        comments.comment AS comment,
+        comments.created_at AS created_at,
+        comments.rating AS rating,
+        comments.shop_reply AS shop_reply,
+        comments.shop_backcomment_status AS shop_backcomment_status,
+        comments.shop_backcomment AS shop_backcomment
+        FROM comments
+        JOIN item ON comments.item_id = item.id
+        JOIN userinformation ON comments.user_id = userinformation.id
+        WHERE 1=1
+        <if test="shenhe != null and shenhe != ''">
+            AND comments.shop_reply = #{shenhe}
+        </if>
+        <if test="huifu != null and huifu != ''">
+            AND comments.shop_backcomment_status = #{huifu}
+        </if>
+        <if test="dengji != null and dengji != ''">
+            AND comments.rating = #{dengji}
+        </if>
+        ORDER BY comments.created_at DESC
+        LIMIT #{limit} OFFSET #{skip}
+    </select>
+
+    <select id="fuzzyQueryComment2" resultType="int">
+        SELECT COUNT(*) AS total
+        FROM comments
+        JOIN item ON comments.item_id = item.id
+        JOIN userinformation ON comments.user_id = userinformation.id
+        WHERE 1=1
+        <if test="shenhe != null and shenhe != ''">
+            AND comments.shop_reply = #{shenhe}
+        </if>
+        <if test="huifu != null and huifu != ''">
+            AND comments.shop_backcomment_status = #{huifu}
+        </if>
+        <if test="dengji != null and dengji != ''">
+            AND comments.rating = #{dengji}
+        </if>
+    </select>
+</mapper>

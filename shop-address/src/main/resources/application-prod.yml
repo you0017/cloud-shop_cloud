@@ -1,0 +1,33 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: shop-address
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+
+#jmx
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    jmx:
+      exposure:
+        include: "*"  # 默认情况下，一些敏感端点是禁用的，可以通过此配置启用
+
+logging:
+  file:
+    path: logs/${spring.application.name}
+  level:
+    root: info
+
+
+
+
+
+
+

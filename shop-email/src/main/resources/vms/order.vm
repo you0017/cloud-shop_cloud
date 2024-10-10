@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>下单提示邮件</title>
+</head>
+
+<body>
+
+<div class="container">
+    <p>发件人:res</p>
+    <p>收件人:${accountid} ${email}</p>
+    <h5>主题:${subject}</h5>
+    <p>尊敬的 ${accountid} :</p>
+    <p>正文:您的帐户${accountid}于${optime}发生变动，消费为${money}元。</p>
+</div>
+<div class="footer">
+    <p>${currentDate}</p>
+</div>
+
+</body>
+</html>
