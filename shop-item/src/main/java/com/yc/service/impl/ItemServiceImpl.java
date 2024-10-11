@@ -79,44 +79,36 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
             pageBean.setPageno(1);
         }
 
-// 创建 Elasticsearch 的搜索请求
+        // 创建 Elasticsearch 的搜索请求
         SearchRequest searchRequest = new SearchRequest("shop_items"); // 索引名
 
-// 构建查询条件
+        // 构建查询条件
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
 
-// 添加状态条件
+        // 添加状态条件
         boolQuery.must(QueryBuilders.termQuery("status", 1)); // 确保状态为 1
 
-// 添加搜索条件，确保满足至少一个条件
+        // 添加搜索条件，确保满足至少一个条件
         if (pageBean.getSearch() != null && !pageBean.getSearch().isEmpty()) {
             boolQuery.should(QueryBuilders.matchQuery("name", pageBean.getSearch()))
                     .should(QueryBuilders.matchQuery("category", pageBean.getSearch()));
             boolQuery.minimumShouldMatch(1); // 至少需要匹配一个条件
         }
+        searchRequest.source().query(boolQuery);
 
-// 创建搜索源构建器（用于设置分页、排序等）
-        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        sourceBuilder.query(boolQuery);
-
-// 添加分页
+        // 添加分页
         int from = (pageBean.getPageno() - 1) * pageBean.getPagesize();
-        sourceBuilder.from(from);
-        sourceBuilder.size(pageBean.getPagesize());
+        searchRequest.source().from(from).size(pageBean.getPagesize());
 
-// 添加排序条件
+        // 添加排序条件
         if (pageBean.getSortby() != null && !pageBean.getSortby().isEmpty()) {
-            SortOrder sortOrder = "asc".equalsIgnoreCase(pageBean.getSort()) ? SortOrder.ASC : SortOrder.DESC;
-            sourceBuilder.sort(new FieldSortBuilder(pageBean.getSortby()).order(sortOrder));
+            searchRequest.source().sort(SortBuilders.fieldSort(pageBean.getSortby()).order(SortOrder.valueOf(pageBean.getSort().toUpperCase())));
         }
 
-// 设置搜索请求的源
-        searchRequest.source(sourceBuilder);
-
-// 执行搜索查询
+        // 执行搜索查询
         SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
 
-// 处理搜索结果
+        // 处理搜索结果
         List<ItemDoc> itemDocs = new ArrayList<>();
         for (SearchHit hit : searchResponse.getHits()) {
             // 反序列化为 Item 对象（根据你的实际需求处理）
@@ -124,10 +116,10 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
             itemDocs.add(itemDoc);
         }
 
-// ItemDoc -> Item
+        // ItemDoc -> Item
         List<Item> items = itemDocs.stream().map(itemDoc -> BeanUtil.toBean(itemDoc, Item.class)).collect(Collectors.toList());
 
-// 设置分页结果到 PageBean
+        // 设置分页结果到 PageBean
         pageBean.setTotal(searchResponse.getHits().getTotalHits().value); // 设置总记录数
         pageBean.setDataset(items); // 设置当前页记录
         pageBean.setTotalpages((int) Math.ceil((double) pageBean.getTotal() / pageBean.getPagesize())); // 计算总页数
@@ -164,24 +156,24 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
         // 创建 SearchRequest
         SearchRequest searchRequest = new SearchRequest("shop_items");
 
-// 创建 BoolQueryBuilder
+        // 创建 BoolQueryBuilder
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
                 .must(QueryBuilders.termQuery("status", 1)); // 状态为 1
 
-// 添加模糊查询条件
+        // 添加模糊查询条件
         boolQuery.should(QueryBuilders.matchQuery("category", association));
         boolQuery.should(QueryBuilders.matchQuery("name", association));
         boolQuery.should(QueryBuilders.matchQuery("brand", association));
         boolQuery.should(QueryBuilders.matchQuery("spec", association));
         boolQuery.should(QueryBuilders.matchQuery("item_details", association));
 
-// 设置至少需要匹配一个条件
+        // 设置至少需要匹配一个条件
         boolQuery.minimumShouldMatch(1); // 至少需要匹配 1 个条件
 
-// 创建 SortBuilder
+        // 创建 SortBuilder
         SortBuilder<?> sortBuilder = SortBuilders.fieldSort("sold").order(SortOrder.ASC);
 
-// 创建 SearchSourceBuilder
+        // 创建 SearchSourceBuilder
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                 .query(boolQuery)
                 .sort(sortBuilder)
@@ -190,10 +182,10 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
 
         searchRequest.source(searchSourceBuilder);
 
-// 执行搜索
+        // 执行搜索
         SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
 
-// 处理搜索结果
+        // 处理搜索结果
         List<ItemDoc> itemDocs = new ArrayList<>();
         for (SearchHit hit : searchResponse.getHits()) {
             // 反序列化为 Item 对象（根据你的实际需求处理）
@@ -201,7 +193,7 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
             itemDocs.add(itemDoc);
         }
 
-// ItemDoc -> Item
+        // ItemDoc -> Item
         List<Item> items = itemDocs.stream().map(itemDoc -> BeanUtil.toBean(itemDoc, Item.class)).collect(Collectors.toList());
 
         return items;
