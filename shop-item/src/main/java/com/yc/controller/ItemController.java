@@ -54,20 +54,7 @@ public class ItemController {
      */
     @GetMapping("/association")
     public JsonModel association(@RequestParam("association") String association) throws IOException {
-        LambdaQueryWrapper<Item> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(Item::getCategory, association)
-                .or()
-                .like(Item::getName, association)
-                .or()
-                .like(Item::getBrand, association)
-                .or()
-                .like(Item::getSpec, association)
-                .or()
-                .like(Item::getItem_details, association)
-                .eq(Item::getStatus, 1)
-                .orderByAsc(Item::getSold) // 使用字段名
-                .last("LIMIT 6 OFFSET 0"); // MyBatis-Plus 允许直接使用 SQL 片段
-        List<Item> list = itemMapper.selectList(wrapper);
+        List<Item> list = itemService.association(association);
         return JsonModel.ok().setDate(list);
     }
 

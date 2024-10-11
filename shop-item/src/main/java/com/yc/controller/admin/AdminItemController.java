@@ -1,18 +1,34 @@
 package com.yc.controller.admin;
 
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.yc.api.UserInformationClient;
 import com.yc.bean.DataModel;
 import com.yc.bean.DataRecord;
 import com.yc.bean.Item;
+import com.yc.bean.ItemDoc;
 import com.yc.mapper.DataRecordMapper;
 import com.yc.mapper.ItemMapper;
 import com.yc.utils.AliOSSUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.CreateIndexRequest;
+import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.MatchAllQueryBuilder;
+import org.elasticsearch.index.query.TermsQueryBuilder;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
+import org.elasticsearch.index.reindex.UpdateByQueryRequest;
+import org.elasticsearch.script.Script;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +49,8 @@ public class AdminItemController {
     String fossUrl = "";  // 主图
     String fossUrl1 = ""; // 附图
 
+    @Autowired
+    private RestHighLevelClient client;
     @Autowired
     private ItemMapper itemMapper;
     @Autowired
@@ -154,6 +172,8 @@ public class AdminItemController {
             ud.setData("成功");
             ud.setMsg("全部上架成功");
             redisTemplate.delete("hot");
+
+            ES(1, null, null);
         } else {
             ud.setCode(1);
             ud.setData("失败");
@@ -176,6 +196,8 @@ public class AdminItemController {
             ud.setData("成功");
             ud.setMsg("全部下架成功");
             redisTemplate.delete("hot");
+
+            ES(2, null, null);
         } else {
             ud.setCode(1);
             ud.setData("失败");
@@ -259,14 +281,14 @@ public class AdminItemController {
         try {
             Part filePart = request.getPart("file");  // 拿到前端的图片数据
             temp = aliOSSUtils.upload(filePart);
-        }catch (Exception e){
+        } catch (Exception e) {
             flag = 0;
         }
 
-        if (flag==1) {
+        if (flag == 1) {
             pd.setData(temp);
             pd.setCode(0);
-        }else {
+        } else {
             pd.setCode(1);
             pd.setMsg("上传失败");
         }
@@ -303,6 +325,8 @@ public class AdminItemController {
         if (i >= 1) {
             dm.setCode(0);
             dm.setMsg("添加成功");
+
+            ES(5, null, item);
         } else {
             dm.setCode(1);
             dm.setMsg("添加失败");
@@ -349,7 +373,6 @@ public class AdminItemController {
 
 // 执行更新
         int result = itemMapper.update(null, updateWrapper);
-
 
 
         if (result >= 1) {
@@ -418,6 +441,8 @@ public class AdminItemController {
             ud = allItemData(ud, request);
             ud.setCode(0);
             redisTemplate.delete("hot");
+
+            ES(6, strArray, null);
         } else {
             ud.setMsg("删除失败");
             ud.setCode(1);
@@ -460,6 +485,8 @@ public class AdminItemController {
         if (i >= 1) {
             ud = allItemData(ud, request);
             redisTemplate.delete("hot");
+
+            ES(3, strArray, null);
         } else {
             ud.setMsg("更新失败");
             ud.setCode(1);
@@ -486,6 +513,7 @@ public class AdminItemController {
         if (i >= 1) {
             ud = allItemData(ud, request);
             redisTemplate.delete("hot");
+            ES(4, strArray, null);
         } else {
             ud.setMsg("更新失败");
             ud.setCode(1);
@@ -545,5 +573,175 @@ public class AdminItemController {
         return result;
     }*/
 
+    /**
+     * 1 全部上架
+     * 2 全部下架
+     * 3 部分下架
+     * 4 部分上架
+     * 5 新增
+     * 6 删除
+     */
+    public void ES(int op, String[] str, Item item) {
+        try {
+            if (op == 1) {
+                //上架所有
 
+                // 创建更新请求，指定索引名称
+                UpdateByQueryRequest request = new UpdateByQueryRequest("shop_items");
+
+                // 匹配所有文档
+                request.setQuery(new MatchAllQueryBuilder());
+
+                // 设置脚本，将 status 字段更新为 0
+                String script = "ctx._source['status'] = 1";
+                request.setScript(new Script(script));
+
+                // 执行更新操作
+                BulkByScrollResponse bulkResponse = client.updateByQuery(request, RequestOptions.DEFAULT);
+
+                // 打印更新的文档数量
+                System.out.println("更新文档总数：" + bulkResponse.getUpdated());
+            } else if (op == 2) {
+                //全部下架
+
+                // 创建更新请求，指定索引名称
+                UpdateByQueryRequest request = new UpdateByQueryRequest("shop_items");
+
+                // 匹配所有文档
+                request.setQuery(new MatchAllQueryBuilder());
+
+                // 设置脚本，将 status 字段更新为 1
+                String script = "ctx._source['status'] = 0";
+                request.setScript(new Script(script));
+
+                // 执行更新操作
+                BulkByScrollResponse bulkResponse = client.updateByQuery(request, RequestOptions.DEFAULT);
+
+                // 打印更新的文档数量
+                System.out.println("更新文档总数：" + bulkResponse.getUpdated());
+            } else if (op == 3) {
+                //部分下架
+
+                // 创建更新请求，指定索引名称
+                UpdateByQueryRequest request = new UpdateByQueryRequest("shop_items");
+
+                // 使用terms查询匹配ID列表中的文档
+                TermsQueryBuilder termsQuery = new TermsQueryBuilder("_id", str);
+                request.setQuery(termsQuery);
+
+                // 设置脚本，将 status 字段更新为 1
+                String script = "ctx._source['status'] = 0";
+                request.setScript(new Script(script));
+
+                // 执行更新操作
+                BulkByScrollResponse bulkResponse = client.updateByQuery(request, RequestOptions.DEFAULT);
+
+                // 打印更新的文档数量
+                System.out.println("更新文档总数：" + bulkResponse.getUpdated());
+            } else if (op == 4) {
+                //部分上架
+
+                // 创建更新请求，指定索引名称
+                UpdateByQueryRequest request = new UpdateByQueryRequest("shop_items");
+
+                // 使用terms查询匹配ID列表中的文档
+                TermsQueryBuilder termsQuery = new TermsQueryBuilder("_id", str);
+                request.setQuery(termsQuery);
+
+                // 设置脚本，将 status 字段更新为 1
+                String script = "ctx._source['status'] = 1";
+                request.setScript(new Script(script));
+
+                // 执行更新操作
+                BulkByScrollResponse bulkResponse = client.updateByQuery(request, RequestOptions.DEFAULT);
+
+                // 打印更新的文档数量
+                System.out.println("更新文档总数：" + bulkResponse.getUpdated());
+            } else if (op == 5) {
+                //新增
+                //获取数据库数据封装为ES数据
+                ItemDoc itemDoc = BeanUtil.copyProperties(item, ItemDoc.class);
+                //1.准备Request
+                IndexRequest request = new IndexRequest("shop_items").id(item.getId());
+                //2.准备请求参数
+                request.source(JSONUtil.toJsonStr(itemDoc), XContentType.JSON);
+                //3.发送请求
+                client.index(request, RequestOptions.DEFAULT);
+            }else if (op == 6) {
+                //删除
+
+                DeleteRequest deleteRequest = new DeleteRequest("shop_items", item.getId());
+
+                client.delete(deleteRequest, RequestOptions.DEFAULT);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("es操作失败");
+        }
+
+        /*try {
+            //直接删了重建
+            DeleteIndexRequest deleteRequest = new DeleteIndexRequest("shop_items");
+            client.indices().delete(deleteRequest, RequestOptions.DEFAULT);
+
+            //1.创建Request对象
+            CreateIndexRequest request = new CreateIndexRequest("shop_items");
+
+            //2.准备请求参数
+            request.source(MAPPING_SHOP_ITEMS, XContentType.JSON);
+
+            //3.发送请求
+            client.indices().create(request, RequestOptions.DEFAULT);
+        }catch (Exception e){
+            e.printStackTrace();
+        }*/
+    }
+
+    private static final String MAPPING_SHOP_ITEMS = "{\n" +
+            "  \"mappings\": {\n" +
+            "    \"properties\": {\n" +
+            "      \"id\": {\n" +
+            "        \"type\": \"keyword\"\n" +
+            "      },\n" +
+            "      \"name\": {\n" +
+            "        \"type\": \"text\",\n" +
+            "        \"analyzer\": \"ik_smart\"\n" +
+            "      },\n" +
+            "      \"price\": {\n" +
+            "        \"type\": \"integer\"\n" +
+            "      },\n" +
+            "      \"stock\": {\n" +
+            "        \"type\": \"integer\"\n" +
+            "      },\n" +
+            "      \"image\": {\n" +
+            "        \"type\": \"keyword\",\n" +
+            "        \"index\": false\n" +
+            "      },\n" +
+            "      \"category\": {\n" +
+            "        \"type\": \"keyword\"\n" +
+            "      },\n" +
+            "      \"brand\": {\n" +
+            "        \"type\": \"keyword\"\n" +
+            "      },\n" +
+            "      \"spec\": {\n" +
+            "        \"type\": \"text\",\n" +
+            "        \"analyzer\": \"ik_smart\"\n" +
+            "      },\n" +
+            "      \"sold\": {\n" +
+            "        \"type\": \"integer\"\n" +
+            "      },\n" +
+            "      \"commentCount\": {\n" +
+            "        \"type\": \"integer\",\n" +
+            "        \"index\": false\n" +
+            "      },\n" +
+            "      \"rating\": {\n" +
+            "        \"type\": \"binary\",\n" +
+            "        \"index\": false\n" +
+            "      },\n" +
+            "      \"status\": {\n" +
+            "        \"type\": \"integer\"\n" +
+            "      }\n" +
+            "    }\n" +
+            "  }\n" +
+            "}\n";
 }

@@ -16,4 +16,6 @@ public interface ItemService extends IService<Item> {
     public PageBean<Item> selectByPage(PageBean<Item> pageBean) throws IOException;
 
     public void fallback(List<OrderDetail> orderDetails);
+
+    public List<Item> association(String association) throws IOException;
 }
