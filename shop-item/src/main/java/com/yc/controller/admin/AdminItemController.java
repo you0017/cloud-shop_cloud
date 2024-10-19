@@ -3,6 +3,7 @@ package com.yc.controller.admin;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.yc.api.UserInformationClient;
@@ -17,6 +18,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.RequestOptions;
@@ -680,6 +683,7 @@ public class AdminItemController {
         }
 
         /*try {
+            List<Item> items = itemMapper.selectList(null);
             //直接删了重建
             DeleteIndexRequest deleteRequest = new DeleteIndexRequest("shop_items");
             client.indices().delete(deleteRequest, RequestOptions.DEFAULT);
@@ -692,6 +696,31 @@ public class AdminItemController {
 
             //3.发送请求
             client.indices().create(request, RequestOptions.DEFAULT);
+
+
+            // 准备 bulk 请求
+            BulkRequest bulkRequest = new BulkRequest();
+
+            // 遍历数据库中查到的 items
+            for (Item item1 : items) {
+                // 创建 IndexRequest 并指定索引名
+                IndexRequest indexRequest = new IndexRequest("shop_items")
+                        .id(item1.getId().toString()) // 使用 item 的 id 作为文档 ID
+                        .source(JSON.toJSONString(item1), XContentType.JSON); // 将 Item 对象转为 JSON 字符串
+
+                // 将每个请求添加到 bulk 请求中
+                bulkRequest.add(indexRequest);
+            }
+
+            // 执行 bulk 请求
+            BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+
+            // 检查是否有失败的请求
+            if (bulkResponse.hasFailures()) {
+                System.out.println("部分数据插入失败：" + bulkResponse.buildFailureMessage());
+            } else {
+                System.out.println("数据批量插入成功！");
+            }
         }catch (Exception e){
             e.printStackTrace();
         }*/
@@ -701,7 +730,7 @@ public class AdminItemController {
             "  \"mappings\": {\n" +
             "    \"properties\": {\n" +
             "      \"id\": {\n" +
-            "        \"type\": \"keyword\"\n" +
+            "        \"type\": \"integer\"\n" +
             "      },\n" +
             "      \"name\": {\n" +
             "        \"type\": \"text\",\n" +

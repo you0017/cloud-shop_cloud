@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
-
+import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -84,7 +84,13 @@ public class SendSms {
         //短信验证码存入redis
         //按照  手机号    ---   验证码的形式
         //redisTemplate.delete(mobile);
-        redisTemplate.opsForValue().set(mobile,verificationCode);
+        if (redisTemplate.hasKey(mobile)) {
+            Long remainingTime = redisTemplate.getExpire(mobile, TimeUnit.SECONDS);
+            throw new IllegalArgumentException("验证码不可重复请求，" + remainingTime + "秒后可再次请求");
+        } else {
+            redisTemplate.opsForValue().set(mobile, verificationCode, 60, TimeUnit.SECONDS);
+        }
+
 
         // Asynchronously get the return value of the API request
         CompletableFuture<SendSmsResponse> response = client.sendSms(sendSmsRequest);

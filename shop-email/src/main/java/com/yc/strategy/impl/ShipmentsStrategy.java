@@ -20,7 +20,7 @@ public class ShipmentsStrategy implements MessageStrategy {
     @Autowired
     protected VelocityContext context;
     @Autowired
-    @Qualifier("registerTemplate")
+    @Qualifier("shipmentsTemplate")
     private Template orderTemplate;
     @Autowired
     @Qualifier("fullDf")
